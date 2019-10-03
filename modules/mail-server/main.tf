@@ -1,9 +1,26 @@
 resource "digitalocean_droplet" "mail_server" {
-  image    = "ubuntu-18-04-x64"
+  image    = var.image
   name     = var.hostname
-  region   = "nyc3"
-  size     = "${var.droplet_size}"
+  region   = var.region
+  size     = var.droplet_size
   ssh_keys = [var.ssh_key]
+
+  provisioner "remote-exec" {
+    inline = [
+      "DEBIAN_FRONTEND=noninteractive apt-get -y upgrade",
+      "git clone https://github.com/mail-in-a-box/mailinabox",
+      "cd mailinabox",
+      "git checkout ${var.mailinabox_version}"
+    ]
+
+    connection {
+      type        = "ssh"
+      host        = digitalocean_droplet.mail_server.ipv4_address
+      user        = "root"
+      private_key = "${file(var.pvt_key)}"
+      timeout     = "2m"
+    }
+  }
 }
 
 resource "digitalocean_firewall" "mail_server" {
